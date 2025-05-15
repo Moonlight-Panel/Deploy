@@ -18,7 +18,7 @@ services:
       - MOONLIGHT_DATABASE_PASSWORD=s3cret
       - MOONLIGHT_DATABASE_DATABASE=moonlight
       - MOONLIGHT_PUBLICURL=http://localhost:9069
-      - MOONLIGHT_AUTHENTICATION_OAUTH2_ACCESSENDPOINT=http://localhost:8080 # Use this when moonlight is using local oauth2 and a different port as the public url
+      - MOONLIGHT_AUTHENTICATION_OAUTH2_ACCESSENDPOINT=http://localhost:8080/oauth2/handle # Use this when moonlight is using local oauth2 and a different port as the public url
     volumes:
       - ./data/moonlight:/app/storage
     links:

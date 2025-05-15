@@ -1,9 +1,8 @@
 # Prepare runtime docker image
-FROM mcr.microsoft.com/dotnet/aspnet:8.0-noble-chiseled AS base
-WORKDIR /app
+FROM cgr.dev/chainguard/aspnet-runtime:latest AS base
 
 # Prepare build image
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 
 # === Heavy download/install tasks ===
 # should be put here for caching reasons
