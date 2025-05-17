@@ -2,38 +2,41 @@ services:
   api-server:
     user: 0:0
     restart: always
-    image: moonlightpanel/panel:custom
+    image: ${MOONLIGHT_IMAGE}
     build:
       context: .
-      dockerfile: ./Moonlight.ApiServer/Dockerfile
+      dockerfile: ./Dockerfile
+      args:
+        - MOONLIGHT_REPO=${MOONLIGHT_REPOSITORY:-https://github.com/Moonlight-Panel/Moonlight}
+        - MOONLIGHT_BRANCH=${MOONLIGHT_BRANCH:-v2_ChangeArchitecture}
     ports:
-      - "9069:8080"
+      - "${MOONLIGHT_PORT}:8080"
     depends_on:
       db:
         condition: service_healthy
     environment:
       - MOONLIGHT_DATABASE_HOST=db
       - MOONLIGHT_DATABASE_PORT=5432
-      - MOONLIGHT_DATABASE_USERNAME=moonlight
-      - MOONLIGHT_DATABASE_PASSWORD=s3cret
-      - MOONLIGHT_DATABASE_DATABASE=moonlight
-      - MOONLIGHT_PUBLICURL=http://localhost:9069
+      - MOONLIGHT_DATABASE_USERNAME=${MOONLIGHT_DATABASE_USER}
+      - MOONLIGHT_DATABASE_PASSWORD=${MOONLIGHT_DATABASE_PASSWORD}
+      - MOONLIGHT_DATABASE_DATABASE=${MOONLIGHT_DATABASE_NAME}
+      - MOONLIGHT_PUBLICURL=${MOONLIGHT_URL}
       - MOONLIGHT_AUTHENTICATION_OAUTH2_ACCESSENDPOINT=http://localhost:8080/oauth2/handle # Use this when moonlight is using local oauth2 and a different port as the public url
     volumes:
-      - ./data/moonlight:/app/storage
+      - ${MOONLIGHT_DATA}/moonlight:/app/storage
     links:
       - db
-    pull_policy: never
+    pull_policy: build
   
   db:
     image: postgres:latest
     restart: always
     environment:
-      - POSTGRES_USER=moonlight
-      - POSTGRES_DB=moonlight
-      - POSTGRES_PASSWORD=s3cret
+      - POSTGRES_USER=${MOONLIGHT_DATABASE_USER}
+      - POSTGRES_DB=${MOONLIGHT_DATABASE_NAME}
+      - POSTGRES_PASSWORD=${MOONLIGHT_DATABASE_PASSWORD}
     volumes:
-      - ./data/database:/var/lib/postgresql/data
+      - .${MOONLIGHT_DATA}/database:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready"]
       interval: 10s
