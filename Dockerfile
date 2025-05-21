@@ -2,7 +2,7 @@
 FROM cgr.dev/chainguard/aspnet-runtime:latest AS base
 
 # Prepare build image
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build-moonlight
 
 # === Heavy download/install tasks ===
 # should be put here for caching reasons
@@ -24,6 +24,7 @@ RUN mkdir -p /src && \
     mkdir -p /src/Moonlight && \
     mkdir -p /src/Plugins && \
     mkdir -p /src/pluginNuget && \
+    mkdir -p /src/toolNuget && \
     mkdir -p /src/moonlightNuget
     
 WORKDIR /src
@@ -39,8 +40,16 @@ RUN npm i
 
 WORKDIR /src
 
+# Install the scripts project as a dotnet tool and set the env for the dotnet cli to find
+RUN dotnet pack --output /src/toolNuget Moonlight/Resources/Scripts/Scripts.csproj && \
+    dotnet tool install --add-source /src/toolNuget --global dotnet-moonlight 
+
+ENV PATH="$PATH:~/.dotnet/tools"
+
+FROM build-moonlight AS build-plugins
+
 # Build moonlight as nuget packages
-RUN dotnet run --project Moonlight/Resources/Scripts/Scripts.csproj -- pack /src/Moonlight /src/moonlightNuget --build-configuration $PACK_BUILD_CONFIGURATION
+RUN dotnet moonlight pack /src/Moonlight /src/moonlightNuget --build-configuration $PACK_BUILD_CONFIGURATION
 
 # Make the moonlight nuget accessible for the compilation
 RUN dotnet nuget add source /src/moonlightNuget -n moonlightNuget
@@ -56,14 +65,16 @@ RUN grep -v '^#' plugins.txt | \
     done 
 
 # Build plugin nuget packages
-RUN dotnet run --project Moonlight/Resources/Scripts/Scripts.csproj -- pack /src/Plugins /src/pluginNuget --build-configuration $PACK_BUILD_CONFIGURATION
+RUN dotnet moonlight pack /src/Plugins /src/pluginNuget --build-configuration $PACK_BUILD_CONFIGURATION
 
 # Make the plugin nuget accessible for the compilation and remove the moonlight nuget source
 RUN dotnet nuget remove source moonlightNuget
 RUN dotnet nuget add source /src/pluginNuget -n pluginNuget
 
 # Prepare moonlight for compilation
-RUN dotnet run --project Moonlight/Resources/Scripts/Scripts.csproj -- prebuild /src/Moonlight /src/pluginNuget
+RUN dotnet moonlight  prebuild /src/Moonlight /src/pluginNuget
+
+FROM build-plugins AS build-final
 
 # Build tailwind
 WORKDIR /src/Moonlight/Moonlight.Client/Styles
@@ -74,7 +85,7 @@ WORKDIR "/src/Moonlight/Moonlight.ApiServer"
 RUN dotnet build "Moonlight.ApiServer.csproj" -c $BUILD_CONFIGURATION -o /app/build/
 
 # Publish application
-FROM build AS publish
+FROM build-final AS publish
 
 ARG BUILD_CONFIGURATION=Release
 
