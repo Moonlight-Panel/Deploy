@@ -72,13 +72,13 @@ RUN dotnet nuget remove source moonlightNuget
 RUN dotnet nuget add source /src/pluginNuget -n pluginNuget
 
 # Prepare moonlight for compilation
-RUN dotnet moonlight  prebuild /src/Moonlight /src/pluginNuget
+RUN dotnet moonlight prebuild /src/Moonlight /src/pluginNuget
 
 FROM build-plugins AS build-final
 
 # Build tailwind
 WORKDIR /src/Moonlight/Moonlight.Client/Styles
-RUN npm run tailwind
+RUN npm run tailwind-build
 
 # Build moonlight
 WORKDIR "/src/Moonlight/Moonlight.ApiServer"

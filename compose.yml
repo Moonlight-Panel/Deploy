@@ -22,11 +22,14 @@ services:
       - MOONLIGHT_DATABASE_DATABASE=${MOONLIGHT_DATABASE_NAME}
       - MOONLIGHT_PUBLICURL=${MOONLIGHT_URL}
       - MOONLIGHT_AUTHENTICATION_OAUTH2_ACCESSENDPOINT=http://localhost:8080/oauth2/handle # Use this when moonlight is using local oauth2 and a different port as the public url
+    env_file:
+      - path: "additional.env"
+        required: false
     volumes:
       - ${MOONLIGHT_DATA}/moonlight:/app/storage
     links:
       - db
-    pull_policy: build
+    pull_policy: ${MOONLIGHT_BUILD}
   
   db:
     image: postgres:latest
