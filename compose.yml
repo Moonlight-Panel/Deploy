@@ -39,7 +39,7 @@ services:
       - POSTGRES_DB=${MOONLIGHT_DATABASE_NAME}
       - POSTGRES_PASSWORD=${MOONLIGHT_DATABASE_PASSWORD}
     volumes:
-      - .${MOONLIGHT_DATA}/database:/var/lib/postgresql/data
+      - ${MOONLIGHT_DATA}/database:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready"]
       interval: 10s
