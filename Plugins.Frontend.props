@@ -1,0 +1,6 @@
+<Project>
+    <ItemGroup>
+        <!-- Put your plugin references here -->
+        <!-- E.g. <PackageReference Include="MoonlightServers.Frontend" Version="2.1.0" /> -->
+    </ItemGroup>
+</Project>

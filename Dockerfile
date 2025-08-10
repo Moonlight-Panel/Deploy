@@ -11,85 +11,56 @@ FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build-moonlight
 RUN apt-get update && apt-get install nodejs npm git -y && apt-get clean
 
 # === Configuration options ===
+
 # Usefull for custom forks
 ARG BUILD_CONFIGURATION=Release
-ARG PACK_BUILD_CONFIGURATION=Debug
 ARG MOONLIGHT_REPO=https://github.com/Moonlight-Panel/Moonlight
 ARG MOONLIGHT_BRANCH=v2_ChangeArchitecture
+ARG MOONLIGHT_NUGET_SOURCE=https://nuget.pkg.github.com/Moonlight-Panel/index.json
+ARG MOONLIGHT_GITHUB_TOKEN=unset
 
 # === Small preparations ===
 
 # Prepare directories
-RUN mkdir -p /src && \
-    mkdir -p /src/Moonlight && \
-    mkdir -p /src/Plugins && \
-    mkdir -p /src/pluginNuget && \
-    mkdir -p /src/toolNuget && \
-    mkdir -p /src/moonlightNuget
+RUN mkdir -p /src
+
+# Setup nuget package source
+RUN dotnet nuget add source --username Build --password $MOONLIGHT_GITHUB_TOKEN --store-password-in-clear-text --name nuget-moonlight $MOONLIGHT_NUGET_SOURCE
     
 WORKDIR /src
 
 # === Building ===
 
 # Clone the main moonlight repo
-RUN git clone --branch $MOONLIGHT_BRANCH $MOONLIGHT_REPO /src/Moonlight
+RUN git clone --branch $MOONLIGHT_BRANCH $MOONLIGHT_REPO /src/.
 
 # Install npm packages
-WORKDIR /src/Moonlight/Moonlight.Client/Styles
+WORKDIR /src/Moonlight.Client.Runtime/Styles
 RUN npm i
 
 WORKDIR /src
 
-# Install the scripts project as a dotnet tool and set the env for the dotnet cli to find
-RUN dotnet pack --output /src/toolNuget Moonlight/Resources/Scripts/Scripts.csproj && \
-    dotnet tool install --add-source /src/toolNuget --global dotnet-moonlight 
+# Copying plugin references to src
+COPY Plugins.ApiServer.props /src/Moonlight.ApiServer.Runtime/Plugins.props
+COPY Plugins.Frontend.props /src/Moonlight.Client.Runtime/Plugins.props
 
-ENV PATH="$PATH:~/.dotnet/tools"
-
-FROM build-moonlight AS build-plugins
-
-# Build moonlight as nuget packages
-RUN dotnet moonlight pack /src/Moonlight /src/moonlightNuget --build-configuration $PACK_BUILD_CONFIGURATION
-
-# Make the moonlight nuget accessible for the compilation
-RUN dotnet nuget add source /src/moonlightNuget -n moonlightNuget
-
-# Copy plugin links
-COPY plugins.txt /src/plugins.txt
-
-# Clone plugins
-RUN grep -v '^#' plugins.txt | \
-    while read -r repo; \
-    do \
-    git clone "$repo" /src/Plugins/$(basename "$repo" .git); \
-    done 
-
-# Build plugin nuget packages
-RUN dotnet moonlight pack /src/Plugins /src/pluginNuget --build-configuration $PACK_BUILD_CONFIGURATION
-
-# Make the plugin nuget accessible for the compilation and remove the moonlight nuget source
-RUN dotnet nuget remove source moonlightNuget
-RUN dotnet nuget add source /src/pluginNuget -n pluginNuget
-
-# Prepare moonlight for compilation
-RUN dotnet moonlight prebuild /src/Moonlight /src/pluginNuget
-
-FROM build-plugins AS build-final
+# Build solution so every build task ran. Especially for tailwind class names etc
+RUN dotnet build -c $BUILD_CONFIGURATION
 
 # Build tailwind
-WORKDIR /src/Moonlight/Moonlight.Client/Styles
+WORKDIR /src/Moonlight.Client.Runtime/Styles
 RUN npm run tailwind-build
 
-# Build moonlight
-WORKDIR "/src/Moonlight/Moonlight.ApiServer"
-RUN dotnet build "Moonlight.ApiServer.csproj" -c $BUILD_CONFIGURATION -o /app/build/
+# Build moonlight with the built tailwind assets
+WORKDIR "/src/Moonlight.ApiServer.Runtime"
+RUN dotnet build "Moonlight.ApiServer.Runtime.csproj" -c $BUILD_CONFIGURATION -o /app/build/
 
 # Publish application
-FROM build-final AS publish
+FROM build-moonlight AS publish
 
 ARG BUILD_CONFIGURATION=Release
 
-RUN dotnet publish "Moonlight.ApiServer.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "Moonlight.ApiServer.Runtime.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 # Create final minimal image
 FROM base AS final
@@ -97,4 +68,4 @@ FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 
-ENTRYPOINT ["dotnet", "Moonlight.ApiServer.dll"]
+ENTRYPOINT ["dotnet", "Moonlight.ApiServer.Runtime.dll"]

@@ -7,8 +7,10 @@ services:
       context: .
       dockerfile: ./Dockerfile
       args:
-        - MOONLIGHT_REPO=${MOONLIGHT_REPOSITORY:-https://github.com/Moonlight-Panel/Moonlight}
-        - MOONLIGHT_BRANCH=${MOONLIGHT_BRANCH:-v2_ChangeArchitecture}
+        - MOONLIGHT_REPO=${MOONLIGHT_REPOSITORY}
+        - MOONLIGHT_BRANCH=${MOONLIGHT_BRANCH}
+        - MOONLIGHT_GITHUB_TOKEN=${MOONLIGHT_GITHUB_TOKEN}
+        - MOONLIGHT_NUGET_SOURCE=${MOONLIGHT_NUGET_SOURCE}
     ports:
       - "${MOONLIGHT_PORT}:8080"
     depends_on:
