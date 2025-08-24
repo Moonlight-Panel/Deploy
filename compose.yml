@@ -31,7 +31,7 @@ services:
       - ${MOONLIGHT_DATA}/moonlight:/app/storage
     links:
       - db
-    pull_policy: ${MOONLIGHT_BUILD}
+    pull_policy: ${MOONLIGHT_PULL_POLICY}
   
   db:
     image: postgres:latest

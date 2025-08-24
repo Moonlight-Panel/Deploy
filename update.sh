@@ -27,15 +27,15 @@ else
     echo "[i] No update of the deploy repository available"
 fi
 
-if [ "$MOONLIGHT_BUILD" == "build" ]; then
+if [ "$MOONLIGHT_PULL_POLICY" == "build" ]; then
     echo "[i] Rebuilding the docker image"
     docker compose build
     echo "[i] Rebuild done"
 fi
 
-if [ "$MOONLIGHT_BUILD" == "pull" ]; then
+if [ "$MOONLIGHT_PULL_POLICY" == "always" ]; then
     echo "[i] Pulling the latest docker image"
-    docker compose build
+    docker compose pull
     echo "[i] Pulling completed"
 fi
 
